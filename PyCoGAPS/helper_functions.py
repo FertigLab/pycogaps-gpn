@@ -107,7 +107,7 @@ def toAnndata(file, hdf_counts_key=None, hdf_dim1_key=None, hdf_dim2_key=None, t
             if hdf_dim2_key is not None:
                 adata.obs_names = h5py.File(file, 'r')[hdf_dim2_key]
     elif file.lower().endswith(".gct"):
-        csv_table = pd.read_csv(file, sep='\t', skiprows=2)
+        csv_table = pd.read_csv(file, sep='\t', header=2, index_col=[0, 1], skip_blank_lines=True)
         csv_table.to_csv('file.csv', index=False)
         adata = anndata.read_csv('{}.csv'.format(os.path.splitext(file)[0]))
 
