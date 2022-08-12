@@ -147,6 +147,7 @@ def standardCoGAPS(path, params=None, nThreads=1, messages=True,
         unc = pycogaps.Matrix(unc_adata.X)
     else:
         unc = pycogaps.Matrix()
+        unc_adata = None
 
     if prm.coparams["subsetIndices"] is None:
         prm = getDimNames(adata, prm)
