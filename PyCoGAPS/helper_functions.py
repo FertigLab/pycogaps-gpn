@@ -44,7 +44,8 @@ def checkData(adata, params, uncertainty=None):
         raise Exception('data is not numeric')
     if np.any((data < 0)):
         raise Exception('negative values in data matrix')
-    if uncertainty != None:
+    if uncertainty is not None:
+        uncertainty = uncertainty.X
         if np.any((uncertainty < 0)):
             raise Exception('negative values in uncertainty matrix')
         if np.any(uncertainty < 1e-5):

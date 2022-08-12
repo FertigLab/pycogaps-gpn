@@ -143,8 +143,8 @@ def standardCoGAPS(path, params=None, nThreads=1, messages=True,
     make sure uncertainty matrix processed the same way as adata input
     '''
     if uncertainty is not None:
-        unc = toAnndata(uncertainty)
-        unc = pycogaps.Matrix(unc.X)
+        unc_adata = toAnndata(uncertainty)
+        unc = pycogaps.Matrix(unc_adata.X)
     else:
         unc = pycogaps.Matrix()
 
@@ -152,7 +152,7 @@ def standardCoGAPS(path, params=None, nThreads=1, messages=True,
         prm = getDimNames(adata, prm)
 
     # check data input
-    checkData(adata, prm.gaps, uncertainty)
+    checkData(adata, prm.gaps, unc_adata)
     checkInputs(uncertainty, prm)
 
     startupMessage(prm, path)
