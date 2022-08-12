@@ -227,12 +227,13 @@ def getDimNames(data, allParams):
         nGenes = nrowHelper(data)
         nSamples = ncolHelper(data)
 
-    if allParams.coparams['subsetDim'] == 1:
-        nGenes = len(allParams.coparams['subsetIndices'])
-        geneNames = np.take(geneNames, allParams.coparams['subsetIndices'])
-    elif allParams.coparams['subsetDim'] == 2:
-        nSamples = len(allParams.coparams['subsetIndices'])
-        sampleNames = np.take(sampleNames, allParams.coparams['subsetIndices'])
+    if allParams.coparams['subsetIndices'] is not None:
+        if allParams.coparams['subsetDim'] == 0:
+            nGenes = len(allParams.coparams['subsetIndices'])
+            geneNames = np.take(geneNames, allParams.coparams['subsetIndices'])
+        elif allParams.coparams['subsetDim'] == 1:
+            nSamples = len(allParams.coparams['subsetIndices'])
+            sampleNames = np.take(sampleNames, allParams.coparams['subsetIndices'])
 
     if len(geneNames) != nGenes:
         raise Exception(len(geneNames), " != ", nGenes, " incorrect number of gene names given")
@@ -430,16 +431,16 @@ def GapsResultToAnnData(gapsresult, adata, prm):
         anndata: An anndata object.
     """    
     # need to subset matrices based on which dimension we're in...
-    if prm.coparams['subsetDim'] == 1:
-        Amean = toNumpy(gapsresult.Amean)[prm.coparams["subsetIndices"], :]
-        Pmean = toNumpy(gapsresult.Pmean)
-        Asd = toNumpy(gapsresult.Asd)[prm.coparams["subsetIndices"], :]
-        Psd = toNumpy(gapsresult.Psd)
-    else:
-        Amean = toNumpy(gapsresult.Amean)
-        Pmean = toNumpy(gapsresult.Pmean)[prm.coparams["subsetIndices"], :]
-        Asd = toNumpy(gapsresult.Asd)
-        Psd = toNumpy(gapsresult.Psd)[prm.coparams["subsetIndices"], :]
+    # if prm.coparams['subsetDim'] == 1:
+    #     Amean = toNumpy(gapsresult.Amean)[prm.coparams["subsetIndices"], :]
+    #     Pmean = toNumpy(gapsresult.Pmean)
+    #     Asd = toNumpy(gapsresult.Asd)[prm.coparams["subsetIndices"], :]
+    #     Psd = toNumpy(gapsresult.Psd)
+    # else:
+    Amean = toNumpy(gapsresult.Amean)
+    Pmean = toNumpy(gapsresult.Pmean)
+    Asd = toNumpy(gapsresult.Asd)
+    Psd = toNumpy(gapsresult.Psd)
     pattern_labels = ["Pattern" + str(i) for i in range(1, prm.gaps.nPatterns + 1)]
     # load adata obs and var from Amean and Pmean results
     if len(Pmean.shape) > 2:

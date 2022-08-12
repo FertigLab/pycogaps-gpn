@@ -296,13 +296,13 @@ def callInternalCoGAPS(paramlst):
         genesubset = np.take(genes, subsetIndices)
         params.coparams['geneNames'] = set(genesubset)
         adata = adata[subsetIndices, :]
-        params.coparams['subsetDim'] = 1
+        params.coparams['subsetDim'] = 0
     else:
         samples = np.array(params.coparams['sampleNames'])
         samplesubset = np.take(samples, subsetIndices)
         params.coparams['sampleNames'] = samplesubset
         adata = adata[subsetIndices, :]
-        params.coparams['subsetDim'] = 2
+        params.coparams['subsetDim'] = 1
        
     params.coparams['subsetIndices'] = subsetIndices
     params.gaps.workerID = workerID
