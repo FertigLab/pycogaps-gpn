@@ -4,6 +4,8 @@ supports integration with genepattern notebook
 '''
 
 import sys
+import csv
+import ast
 
 if __name__ == '__main__':
     from PyCoGAPS.config import *
@@ -34,7 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--nThreads', type=bool, default=1)
     parser.add_argument('--messages', type=bool, default=True)
     parser.add_argument('--outputFrequency', type=int, default=500)
-    parser.add_argument('--uncertainty', type=str, default=None) # read in as file
+    parser.add_argument('--uncertainty', type=str, default=None) # read in as file, matrix
     parser.add_argument('--checkpointOutFile', type=str, default='gaps_checkpoint.out')
     parser.add_argument('--checkpointInFile', type=str, default="")
     parser.add_argument('--transposeData', type=bool, default=False)
@@ -55,16 +57,16 @@ if __name__ == '__main__':
     parser.add_argument('--cut', type=int, default=None)
     parser.add_argument('--minNS', type=int, default=None)
     parser.add_argument('--maxNS', type=int, default=None)
-    parser.add_argument('--explicitSets', type=str, default=None) # read in as file
-    parser.add_argument('--samplingAnnotation', type=str, default=None) # read in as file
-    parser.add_argument('--samplingWeight', type=str, default=None) # read in as file
+    parser.add_argument('--explicitSets', type=str, default=None) # read in as file, list
+    parser.add_argument('--samplingAnnotation', type=str, default=None) # read in as file, list
+    parser.add_argument('--samplingWeight', type=str, default=None) # read in as file, dictionary
     
     # additional params
-    parser.add_argument('--subsetIndices', type=str, default=None) # read in as file
+    parser.add_argument('--subsetIndices', type=str, default=None) # read in as file, list
     parser.add_argument('--subsetDim', type=int, default=0, choices=[0,1])
-    parser.add_argument('--geneNames', type=str, default=None) # read in as file
-    parser.add_argument('--sampleNames', type=str, default=None) # read in as file
-    parser.add_argument('--fixedPatterns', type=str, default=None) # read in as file
+    parser.add_argument('--geneNames', type=str, default=None) # read in as file, list
+    parser.add_argument('--sampleNames', type=str, default=None) # read in as file, list
+    parser.add_argument('--fixedPatterns', type=str, default=None) # read in as file, matrix
     parser.add_argument('--whichMatrixFixed', type=str, default=None, choices=['A', 'P'])
     parser.add_argument('--takePumpSamples', type=bool, default=False)
     parser.add_argument('--hdfKey', type=str, default=None)
@@ -101,8 +103,23 @@ if __name__ == '__main__':
 
     prm_dict = vars(args)
 
+    ## read in file arguments as vectors/lists/matrices ##
+    list_params = ["explicitSets", "samplingAnnotation", "samplingWeight", "subsetIndices", "geneNames", "sampleNames"]
+    def file_to_type(k, file_path):
+        if file_path is None:
+            return file_path
+        if k == "samplingWeight": # read this as txt -> dictionary
+            with open(file_path) as f:
+                data = f.read()
+                return ast.literal_eval(data)
+        with open(file_path, newline='') as f: # read all others as csv -> list
+            reader = csv.reader(f)
+            return list(reader)[0]
+
     for k,v in prm_dict.items():
         if ((k not in initial_params) and (k not in distributed_params) and (k not in ("fixedPatterns", "uncertainty"))):
+            if k in list_params:
+                v = file_to_type(k, v)
             setParam(params, k, v)
     
      # set fixed patterns from additional params

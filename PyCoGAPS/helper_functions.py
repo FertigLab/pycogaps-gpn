@@ -6,6 +6,7 @@ import h5py
 import scipy.io
 import pkg_resources  # part of setuptools
 from pycogaps import getElement
+import scanpy as sc
 
 def supported(file):
     """ Checks whether file is supported type
@@ -85,9 +86,10 @@ def toAnndata(file, hdf_counts_key=None, hdf_dim1_key=None, hdf_dim2_key=None, t
         table = pd.DataFrame(data=pd_table.values, index=pd_table.index, columns=pd_table.columns)
         adata = anndata.AnnData(table)
     elif file.lower().endswith(".tsv"):
-        csv_table = pd.read_table(file,sep='\t')
-        csv_table.to_csv('file.csv', index=False)
-        adata = anndata.read_csv('{}.csv'.format(os.path.splitext(file)[0]))
+        df = pd.read_table(file,sep='\t')
+        adata = sc.AnnData(df)
+        # csv_table.to_csv('file.csv', index=False)
+        # adata = anndata.read_csv('{}.csv'.format(os.path.splitext(file)[0]))
     elif file.lower().endswith(".mtx"):
         adata = anndata.read_mtx(file)
     elif file.lower().endswith(".h5ad"):
@@ -107,9 +109,11 @@ def toAnndata(file, hdf_counts_key=None, hdf_dim1_key=None, hdf_dim2_key=None, t
             if hdf_dim2_key is not None:
                 adata.obs_names = h5py.File(file, 'r')[hdf_dim2_key]
     elif file.lower().endswith(".gct"):
-        csv_table = pd.read_csv(file, sep='\t', header=2, index_col=[0, 1], skip_blank_lines=True)
-        csv_table.to_csv('file.csv', index=False)
-        adata = anndata.read_csv('{}.csv'.format(os.path.splitext(file)[0]))
+        df = pd.read_csv(file, sep='\t', header=2, index_col=[0], skip_blank_lines=True)
+        df = df.drop(df.columns[0], axis=1) # drop description, keep geneID
+        adata = sc.AnnData(df)        
+        # csv_table.to_csv('file.csv', index=False)
+        # adata = anndata.read_csv('{}.csv'.format(os.path.splitext(file)[0]))
 
     if scipy.sparse.issparse(adata.X):
         adata.X = (adata.X).toarray()
