@@ -121,7 +121,8 @@ class CoParams:
         self.coparams['fixedPatterns'] = fixedPatterns
         self.coparams['whichMatrixFixed'] = whichMatrixFixed
         self.gaps.useFixedPatterns = True
-        self.gaps.fixedPatterns = pycogaps.Matrix(fixedPatterns)
+        fp_anndata = toAnndata(fixedPatterns)
+        self.gaps.fixedPatterns = pycogaps.Matrix(fp_anndata.X[:,1:])
         self.gaps.whichMatrixFixed = whichMatrixFixed
 
     def printParams(self):
