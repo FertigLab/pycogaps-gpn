@@ -55,6 +55,7 @@ def checkData(adata, params, uncertainty=None):
 
 
 def toAnndata(file, hdf_counts_key=None, hdf_dim1_key=None, hdf_dim2_key=None, transposeData=False):
+
     """ Converts file to anndata object
 
     Args:
@@ -220,6 +221,7 @@ def getDimNames(data, allParams):
 
     geneNames = getGeneNames(data, allParams.gaps.transposeData)
     sampleNames = getSampleNames(data, allParams.gaps.transposeData)
+
 
     if allParams.gaps.transposeData:
         nGenes = ncolHelper(data)

@@ -8,6 +8,7 @@ class CoParams:
     """
 
     def __init__(self, path=None, matrix=None, transposeData=False, hdfKey=None, hdfRowKey=None, hdfColKey=None):
+        
         """ Initializes CoParams object. 
             self.gaps : GapsParameters object
             self.cogaps : dictionary of additional parameters (not in GapsParameters)
