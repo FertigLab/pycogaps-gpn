@@ -133,10 +133,7 @@ if __name__ == '__main__':
                 v = file_to_type(k, v)
             if k in bool_params:
                 v = to_bool(v)
-                print(type(v))
-            print(k)
             setParam(params, k, v)
-            print('done')
     
      # set fixed patterns from additional params
     if args.fixedPatterns is not None:
