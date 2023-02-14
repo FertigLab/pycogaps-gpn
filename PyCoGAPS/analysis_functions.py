@@ -1,3 +1,5 @@
+from PyCoGAPS.config import *
+from PyCoGAPS.helper_functions import *
 import pandas as pd
 import numpy as np
 import anndata
@@ -64,6 +66,95 @@ def plot(obj, groups=None, title=None, fn=""):
     plt.show()
     return fig
 
+def patternGSEA(obj, patternmarkers=None, verbose=True, gene_sets = ['MSigDB_Hallmark_2020'], organism="human"):
+    """ Run pygsea enrichr API on gene list for each pattern, return dictionary of results
+
+    Args:
+        obj (anndata): Anndata CoGAPSresult object
+        patternmarkers (optional, default = None): output from patternMarkers() function
+        verbose (optional, default = True): Indicates whether to print messages
+        gene_sets (optional, default = ['MSigDB_Hallmark_2020']): a list of one or more gene sets for enrichr to use
+        organism (optional, default = "human"): which organism your data comes from
+    Returns:
+        gseares: a dictionary of pygsea enrichr API results for each pattern in obj
+    """
+    import pandas as pd
+    pd.options.mode.chained_assignment = None  # default='warn'
+    if patternmarkers is None:
+        patternmarkers = patternMarkers(obj, threshold="all")
+
+    markers = patternmarkers["PatternMarkers"]
+    import gseapy as gp
+    print("This is a wrapper function around the pygsea enrichr API. \n"
+          "Documentation can be found at: https://gseapy.readthedocs.io/en/latest/introduction.html")
+    gsea_results = dict()
+    for pattern in markers:
+        geneset = list(markers[pattern])
+        if(verbose):
+            print("\nUsing " + str(len(geneset)) +" markers of "+ pattern + ":\n")
+            print(geneset)
+        gsea_enr_res = gp.enrichr(gene_list=geneset,
+                           gene_sets=gene_sets,
+                           organism=organism,
+                           outdir=None,  # don't write to disk
+                           verbose=verbose,
+                           )
+
+        gsea_enr_df = pd.DataFrame(gsea_enr_res.results)
+        # plot_enr_df = gsea_enr_df[gsea_enr_df["P-value"] < 0.05]
+        plot_enr_df = gsea_enr_df
+        neg_log_q = (-10) * np.log10(list(plot_enr_df["P-value"]))
+        plot_enr_df["neg.log.q"] = neg_log_q
+
+        gsea_results[pattern] = plot_enr_df
+        # sns.barplot(data=plot_enr_df, x="neg.log.q", y="Term")
+    return gsea_results
+
+def plotPatternGSEA(patternGSEAResults, whichPattern):
+    import seaborn as sns
+    patternName = list(patternGSEAResults.keys())[whichPattern - 1]
+
+    gsea_enr_df = patternGSEAResults[patternName]
+    plot_df = gsea_enr_df[gsea_enr_df["P-value"] < 0.05] # only want to see significant terms
+    sns.barplot(data=plot_df, x="neg.log.q", y="Term").set_title(patternName + " Enriched Terms")
+    plt.show()
+    return plt
+
+def MANOVA(obj, orig, interested_vars):
+    """ performs MANOVA test on user given dependent variables
+
+    Args:
+        obj (anndata): Anndata CoGAPSresult object
+        orig (anndata): Anndata original data
+        interested_vars (list, default = None): output from patternMarkers() function
+    Returns:
+        manova_result: manova result output from calling statsmodels.multivariate.manova function
+    """
+    from statsmodels.multivariate.manova import MANOVA
+
+    # create formula string from interested groups
+    formula = ''
+    for i in interested_vars:
+        formula += ' + ' + i
+    formula = formula[3:]
+
+    # patterns
+    pmat = obj.var
+    npatterns = len(pmat.columns)
+
+    # get columns of interest
+    interested = orig.var[interested_vars]
+
+    for p in range(1,npatterns):
+        pattern = 'Pattern' + str(p)
+        data = pd.concat([pmat[pattern], interested], axis=1)
+        
+        manova_result = MANOVA.from_formula(formula + ' ~ ' + pattern, data)
+        
+        print(pattern + ' MANOVA result:')
+        print(manova_result.mv_test())
+    
+    return manova_result
 
 def patternBoxPlot(obj, groups, fn=""):
     """ generate a boxplot where each subplot displays amplitudes for each group for each pattern
@@ -122,7 +213,7 @@ def calcZ(object: anndata, whichMatrix):
     else:
         print('whichMatrix must be either \'featureLoadings\' or \'sampleFactors\'')
         return
-    if 0 in stddev:
+    if 0 in stddev.values:
         print("zeros detected in the standard deviation matrix; they have been replaced by small values")
         stddev[stddev == 0] = 1 ** -6
     return mean / stddev
@@ -308,7 +399,7 @@ def patternMarkers(adata, threshold='all', lp=None, axis=1):
             pmax = np.nanmax(As.values, axis=1, keepdims=True)
             Arowmax = As / pmax
 
-            ssl = pd.DataFrame().reindex_like(As.drop_duplicates())
+            ssl = pd.DataFrame().reindex_like(As)
             import math
             for i in np.arange(As.shape[1]):
                 lp = np.repeat(0, As.shape[1])
@@ -316,7 +407,7 @@ def patternMarkers(adata, threshold='all', lp=None, axis=1):
                 def stat(x):
                     return (math.sqrt(np.matmul(np.transpose(x-lp), (x-lp))))
 
-                ssl.stat = Arowmax.drop_duplicates().apply(func=stat, axis=1)
+                ssl.stat = Arowmax.apply(func=stat, axis=1)
                 order = np.argsort(ssl.stat)
                 ssl["Pattern"+str(i+1)] = order.values
 
@@ -337,7 +428,7 @@ def patternMarkers(adata, threshold='all', lp=None, axis=1):
             geneThresh = int(thispattern[thispattern > globalmins].min())
 
             markerGenes = sortSim[1:geneThresh]
-            markersByPattern[pname] = markerGenes.values
+            markersByPattern[pname] = list(markerGenes.values)
 
     elif threshold == "all":
         patternsByMarker = markerScores.columns[np.argmin(markerScores.values, axis=1)]
@@ -345,7 +436,7 @@ def patternMarkers(adata, threshold='all', lp=None, axis=1):
             markersByPattern['Pattern' + str(i + 1)] = markerScores[
                 markerScores.columns[i] == patternsByMarker].index.values
 
-    dict = {"PatternMarkers": markersByPattern, "PatternMarkerRanks": np.argsort(markerScores, axis=0),
+    dict = {"PatternMarkers": (markersByPattern), "PatternMarkerRanks": np.argsort(markerScores, axis=0),
             "PatternMarkerScores": markerScores}
     return dict
 
@@ -359,7 +450,7 @@ def calcCoGAPSStat(object, sets, whichMatrix='featureLoadings', numPerm=1000):
         sets (list): list of sets of measurements/samples
         whichMatrix (str, optional): either "featureLoadings" or "sampleFactors" indicating which matrix
         to calculate the statistics. Defaults to 'featureLoadings'.
-        numPerm (int, optional): number of permutations to use when calculatin p-value. Defaults to 1000.
+        numPerm (int, optional): number of permutations to use when calculating p-value. Defaults to 1000.
 
     Raises:
         Exception: If sets are not a list of measurements or samples
@@ -379,7 +470,8 @@ def calcCoGAPSStat(object, sets, whichMatrix='featureLoadings', numPerm=1000):
     pvalUpReg = []
 
     lessThanCount = np.zeros(zMatrix.shape[1])
-    actualZScore = np.mean(zMatrix.loc[sets,:].values, axis=0)
+    arr = zMatrix.loc[sets].values
+    actualZScore = np.mean(arr[np.isfinite(arr)])
     for n in range(numPerm):
         permutedIndices = np.random.choice(np.arange(1, zMatrix.shape[0]), size=len(sets), replace=False)
         permutedZScore = np.mean(zMatrix.iloc[permutedIndices,:].values, axis=0)
@@ -614,7 +706,7 @@ def plotPatternMarkers(data, patternmarkers=None, groups = None, patternPalette=
     return hm
 
 
-def plotUMAP(result, genes_in_rows=True, fn=""):
+def plotPatternUMAP(result, genes_in_rows=True, fn=""):
     """ Create a UMAP plot
 
     Args:
@@ -633,10 +725,10 @@ def plotUMAP(result, genes_in_rows=True, fn=""):
     sc.settings.set_figure_params(dpi=80, facecolor='white')
     # result.var_names_make_unique()
     # filter genes and cells
-    sc.pl.highest_expr_genes(result, n_top=20, save="{}_highestExpressedGenes.png".format(fn))
-    sc.pp.filter_cells(result, min_genes=200)
-    sc.pp.filter_genes(result, min_cells=3)
-    sc.pp.log1p(result)
+    # sc.pl.highest_expr_genes(result, n_top=20, save="{}_highestExpressedGenes.png".format(fn))
+    # sc.pp.filter_cells(result, min_genes=200)
+    # sc.pp.filter_genes(result, min_cells=3)
+    # sc.pp.log1p(result)
     sc.pp.highly_variable_genes(result, min_mean=0.0125, max_mean=3, min_disp=0.5)
     result = result[:, result.var.highly_variable]
     sc.pp.scale(result, max_value=10)
@@ -645,25 +737,25 @@ def plotUMAP(result, genes_in_rows=True, fn=""):
     sc.tl.umap(result)
     sc.pl.umap(result, color=patterns, save="{}_UMAP.png".format(fn))
 
-if __name__ == '__main__':
-    import pickle
-    import sys
-    import os
-    import matplotlib as mpl
-    mpl.use('tkagg')
+# if __name__ == '__main__':
+#     import pickle
+#     import sys
+#     import os
+#     import matplotlib as mpl
+#     mpl.use('tkagg')
 
-    # path to your result file, from command line
-    pkl_path = sys.argv[1]
+#     # path to your result file, from command line
+#     pkl_path = sys.argv[1]
     
-    # this unpickles the result object for use
-    result = pickle.load(open(pkl_path, "rb"))
+#     # this unpickles the result object for use
+#     result = pickle.load(open(pkl_path, "rb"))
 
-    # get filename, to name the saved plots
-    filename = os.path.basename(pkl_path).split('.')[0]
+#     # get filename, to name the saved plots
+#     filename = os.path.basename(pkl_path).split('.')[0]
 
-    # call some of the plotting functions and save
-    plot(result, fn=filename)
-    binaryA(result, threshold=2, fn=filename)
-    plotPatternMarkers(result, fn=filename)
-    plotResiduals(result, fn=filename)
-    plotUMAP(result, fn=filename)
+#     # call some of the plotting functions and save
+#     plot(result, fn=filename)
+#     binaryA(result, threshold=2, fn=filename)
+#     plotPatternMarkers(result, fn=filename)
+#     plotResiduals(result, fn=filename)
+#     plotPatternUMAP(result, fn=filename)

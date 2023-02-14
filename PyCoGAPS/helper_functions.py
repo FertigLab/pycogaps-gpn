@@ -1,12 +1,9 @@
-import pandas as pd
-
 from PyCoGAPS.config import *
 
 import h5py
 import scipy.io
 import pkg_resources  # part of setuptools
 from pycogaps import getElement
-import scanpy as sc
 
 def supported(file):
     """ Checks whether file is supported type
@@ -44,8 +41,7 @@ def checkData(adata, params, uncertainty=None):
         raise Exception('data is not numeric')
     if np.any((data < 0)):
         raise Exception('negative values in data matrix')
-    if uncertainty is not None:
-        uncertainty = uncertainty.X
+    if uncertainty != None:
         if np.any((uncertainty < 0)):
             raise Exception('negative values in uncertainty matrix')
         if np.any(uncertainty < 1e-5):
@@ -55,7 +51,6 @@ def checkData(adata, params, uncertainty=None):
 
 
 def toAnndata(file, hdf_counts_key=None, hdf_dim1_key=None, hdf_dim2_key=None, transposeData=False):
-
     """ Converts file to anndata object
 
     Args:
@@ -84,14 +79,13 @@ def toAnndata(file, hdf_counts_key=None, hdf_dim1_key=None, hdf_dim2_key=None, t
         # table = pd.read_table(file)
         # adata = anndata.AnnData(table.iloc[:, 2:])
         # adata.obs_names = table["symbol"]
-        pd_table = pd.read_table(file)
+        pd_table = pd.read_table(file, header=None)
         table = pd.DataFrame(data=pd_table.values, index=pd_table.index, columns=pd_table.columns)
         adata = anndata.AnnData(table)
     elif file.lower().endswith(".tsv"):
-        df = pd.read_table(file,sep='\t')
-        adata = sc.AnnData(df)
-        # csv_table.to_csv('file.csv', index=False)
-        # adata = anndata.read_csv('{}.csv'.format(os.path.splitext(file)[0]))
+        csv_table = pd.read_table(file,sep='\t')
+        csv_table.to_csv('file.csv', index=False)
+        adata = anndata.read_csv('{}.csv'.format(os.path.splitext(file)[0]))
     elif file.lower().endswith(".mtx"):
         adata = anndata.read_mtx(file)
     elif file.lower().endswith(".h5ad"):
@@ -111,11 +105,9 @@ def toAnndata(file, hdf_counts_key=None, hdf_dim1_key=None, hdf_dim2_key=None, t
             if hdf_dim2_key is not None:
                 adata.obs_names = h5py.File(file, 'r')[hdf_dim2_key]
     elif file.lower().endswith(".gct"):
-        df = pd.read_csv(file, sep='\t', header=2, index_col=[0], skip_blank_lines=True)
-        df = df.drop(df.columns[0], axis=1) # drop description, keep geneID
-        adata = sc.AnnData(df)        
-        # csv_table.to_csv('file.csv', index=False)
-        # adata = anndata.read_csv('{}.csv'.format(os.path.splitext(file)[0]))
+        csv_table = pd.read_csv(file, sep='\t', skiprows=2)
+        csv_table.to_csv('file.csv', index=False)
+        adata = anndata.read_csv('{}.csv'.format(os.path.splitext(file)[0]))
 
     if scipy.sparse.issparse(adata.X):
         adata.X = (adata.X).toarray()
@@ -222,7 +214,6 @@ def getDimNames(data, allParams):
     geneNames = getGeneNames(data, allParams.gaps.transposeData)
     sampleNames = getSampleNames(data, allParams.gaps.transposeData)
 
-
     if allParams.gaps.transposeData:
         nGenes = ncolHelper(data)
         nSamples = nrowHelper(data)
@@ -230,13 +221,12 @@ def getDimNames(data, allParams):
         nGenes = nrowHelper(data)
         nSamples = ncolHelper(data)
 
-    if allParams.coparams['subsetIndices'] is not None:
-        if allParams.coparams['subsetDim'] == 0:
-            nGenes = len(allParams.coparams['subsetIndices'])
-            geneNames = np.take(geneNames, allParams.coparams['subsetIndices'])
-        elif allParams.coparams['subsetDim'] == 1:
-            nSamples = len(allParams.coparams['subsetIndices'])
-            sampleNames = np.take(sampleNames, allParams.coparams['subsetIndices'])
+    if allParams.coparams['subsetDim'] == 1:
+        nGenes = len(allParams.coparams['subsetIndices'])
+        geneNames = np.take(geneNames, allParams.coparams['subsetIndices'])
+    elif allParams.coparams['subsetDim'] == 2:
+        nSamples = len(allParams.coparams['subsetIndices'])
+        sampleNames = np.take(sampleNames, allParams.coparams['subsetIndices'])
 
     if len(geneNames) != nGenes:
         raise Exception(len(geneNames), " != ", nGenes, " incorrect number of gene names given")
@@ -434,16 +424,16 @@ def GapsResultToAnnData(gapsresult, adata, prm):
         anndata: An anndata object.
     """    
     # need to subset matrices based on which dimension we're in...
-    # if prm.coparams['subsetDim'] == 1:
-    #     Amean = toNumpy(gapsresult.Amean)[prm.coparams["subsetIndices"], :]
-    #     Pmean = toNumpy(gapsresult.Pmean)
-    #     Asd = toNumpy(gapsresult.Asd)[prm.coparams["subsetIndices"], :]
-    #     Psd = toNumpy(gapsresult.Psd)
-    # else:
-    Amean = toNumpy(gapsresult.Amean)
-    Pmean = toNumpy(gapsresult.Pmean)
-    Asd = toNumpy(gapsresult.Asd)
-    Psd = toNumpy(gapsresult.Psd)
+    if prm.coparams['subsetDim'] == 1:
+        Amean = toNumpy(gapsresult.Amean)[prm.coparams["subsetIndices"], :]
+        Pmean = toNumpy(gapsresult.Pmean)
+        Asd = toNumpy(gapsresult.Asd)[prm.coparams["subsetIndices"], :]
+        Psd = toNumpy(gapsresult.Psd)
+    else:
+        Amean = toNumpy(gapsresult.Amean)
+        Pmean = toNumpy(gapsresult.Pmean)[prm.coparams["subsetIndices"], :]
+        Asd = toNumpy(gapsresult.Asd)
+        Psd = toNumpy(gapsresult.Psd)[prm.coparams["subsetIndices"], :]
     pattern_labels = ["Pattern" + str(i) for i in range(1, prm.gaps.nPatterns + 1)]
     # load adata obs and var from Amean and Pmean results
     if len(Pmean.shape) > 2:
@@ -459,11 +449,11 @@ def GapsResultToAnnData(gapsresult, adata, prm):
     #     adata.var = pd.DataFrame(data=Amean, index=adata.var_names, columns=pattern_labels)
     #     adata.uns["asd"] = pd.DataFrame(data=Asd, index=adata.var_names, columns=pattern_labels)
     #     adata.uns["psd"] = pd.DataFrame(data=Psd, index=adata.obs_names, columns=pattern_labels)
-    adata.uns["atomhistoryA"] = pd.Series(gapsresult.atomHistoryA)
-    adata.uns["atomhistoryP"] = pd.Series(gapsresult.atomHistoryP)
+    adata.uns["atomhistoryA"] = list(gapsresult.atomHistoryA)
+    adata.uns["atomhistoryP"] = list(gapsresult.atomHistoryP)
     adata.uns["averageQueueLengthA"] = float(gapsresult.averageQueueLengthA)
     adata.uns["averageQueueLengthP"] = float(gapsresult.averageQueueLengthP)
-    adata.uns["chisqHistory"] = pd.Series(gapsresult.chisqHistory)
+    adata.uns["chisqHistory"] = list(gapsresult.chisqHistory)
     adata.uns["equilibrationSnapshotsA"] = toNumpyFromVector(gapsresult.equilibrationSnapshotsA)
     adata.uns["equilibrationSnapshotsP"] = toNumpyFromVector(gapsresult.equilibrationSnapshotsP)
     adata.uns["meanChiSq"] = float(gapsresult.meanChiSq)
@@ -538,6 +528,5 @@ def current_milli_time():
         int: Current time in milliseconds.
     """    
     return round(time.time() * 1000)
-
 
 

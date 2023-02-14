@@ -111,8 +111,8 @@ def stitchTogether(finalresult, result, params, sets, adata):
         for r in finalresult[1:]:
             Amean = Amean.append(r.obs)
             Asd = Asd.append(r.uns["asd"])
-        Amean = Amean.reindex(adata.obs_names)
-        Asd = Asd.reindex(adata.obs_names)
+        Amean.reindex_like(adata.obs)
+        Asd.reindex_like(adata.obs)
         Pmean = finalresult[0].var.reindex(adata.var_names)
         Psd = finalresult[0].uns['psd'].reindex(adata.var_names)
 
@@ -153,4 +153,3 @@ def corcut(allpatterns, cut, minNS):
             warnings.warn("cluster did not meet minNS threshold and will be excluded")
     # print("CORCUT cluster IDs:", clustid)
     return clustid
-
