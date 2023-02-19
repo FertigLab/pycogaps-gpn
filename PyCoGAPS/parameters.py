@@ -127,10 +127,11 @@ class CoParams:
             as well as fixed runs of standard CoGAPS.
             whichMatrixFixed (str): Either 'A' or 'P', indicating which matrix is fixed
         """ 
-
         self.coparams['fixedPatterns'] = fixedPatterns
         self.coparams['whichMatrixFixed'] = whichMatrixFixed
         self.gaps.useFixedPatterns = True
+        if fixedPatterns.lower().endswith(".csv"):
+            fixedPatterns = pd.read_csv(fixedPatterns).to_numpy()
         self.gaps.fixedPatterns = pycogaps.Matrix(fixedPatterns)
         self.gaps.whichMatrixFixed = whichMatrixFixed
 

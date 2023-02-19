@@ -41,10 +41,10 @@ def checkData(adata, params, uncertainty=None):
         raise Exception('data is not numeric')
     if np.any((data < 0)):
         raise Exception('negative values in data matrix')
-    if uncertainty != None:
-        if np.any((uncertainty < 0)):
+    if uncertainty is not None:
+        if np.any((uncertainty.X < 0)):
             raise Exception('negative values in uncertainty matrix')
-        if np.any(uncertainty < 1e-5):
+        if np.any(uncertainty.X < 1e-5):
             raise Warning('small values in uncertainty matrix detected')
     if data.shape[0] <= params.nPatterns | data.shape[1] <= params.nPatterns:
         raise Exception('nPatterns must be less than dimensions of data')
@@ -422,16 +422,20 @@ def GapsResultToAnnData(gapsresult, adata, prm):
 
     Returns:
         anndata: An anndata object.
-    """    
+    """  
     # need to subset matrices based on which dimension we're in...
     if prm.coparams['subsetDim'] == 1:
         Amean = toNumpy(gapsresult.Amean)[prm.coparams["subsetIndices"], :]
+        if prm.coparams["subsetIndices"] is not None:
+            adata = adata[prm.coparams["subsetIndices"], :]
         Pmean = toNumpy(gapsresult.Pmean)
         Asd = toNumpy(gapsresult.Asd)[prm.coparams["subsetIndices"], :]
         Psd = toNumpy(gapsresult.Psd)
     else:
         Amean = toNumpy(gapsresult.Amean)
-        Pmean = toNumpy(gapsresult.Pmean)[prm.coparams["subsetIndices"], :]
+        Pmean = toNumpy(gapsresult.Pmean)[prm.coparams["subsetIndices"], :] 
+        if prm.coparams["subsetIndices"] is not None:
+            adata = adata[:, prm.coparams["subsetIndices"]]
         Asd = toNumpy(gapsresult.Asd)
         Psd = toNumpy(gapsresult.Psd)[prm.coparams["subsetIndices"], :]
     pattern_labels = ["Pattern" + str(i) for i in range(1, prm.gaps.nPatterns + 1)]
