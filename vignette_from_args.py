@@ -58,7 +58,7 @@ if __name__ == '__main__':
         params.setDistributedParams(nSets=dist_prm['nSets'], cut=dist_prm['cut'], minNS=dist_prm['minNS'], maxNS=dist_prm['maxNS'])
 
     # run CoGAPS
-    result = CoGAPS(data_path, params)
+    result = CoGAPS(data_path, params, uncertainty=prm['run_params']['uncertainty'])
 
     # save CoGAPS result
     print("Pickling...", end='\r')
