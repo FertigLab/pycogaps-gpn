@@ -5,6 +5,8 @@ reads in list parameters from file - different from Docker procedure!
 '''
 
 import sys
+sys.path.insert(0, '/home/user/pycogaps-gpn')
+
 import csv
 import ast
 
