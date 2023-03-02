@@ -33,18 +33,18 @@ if __name__ == '__main__':
     parser.add_argument('--nPatterns', type=int, default=3)
     parser.add_argument('--nIterations', type=int, default=1000)
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--useSparseOptimization', type=bool, default=False)
+    parser.add_argument('--useSparseOptimization', type=str, default="False", choices=["False","True"])
     
     # run params
-    parser.add_argument('--nThreads', type=bool, default=1)
-    parser.add_argument('--messages', type=bool, default=True)
+    parser.add_argument('--nThreads', type=int, default=1)
+    parser.add_argument('--messages', type=str, default="True", choices=["False","True"])
     parser.add_argument('--outputFrequency', type=int, default=500)
     parser.add_argument('--uncertainty', type=str, default=None) # read in as file, matrix
     parser.add_argument('--checkpointOutFile', type=str, default='gaps_checkpoint.out')
     parser.add_argument('--checkpointInFile', type=str, default="")
-    parser.add_argument('--transposeData', type=bool, default=False)
+    parser.add_argument('--transposeData', type=str, default="False", choices=["False","True"])
     parser.add_argument('--workerID', type=int, default=1)
-    parser.add_argument('--asynchronousUpdates', type=bool, default=False)
+    parser.add_argument('--asynchronousUpdates', type=str, default="False", choices=["True", "False"])
     parser.add_argument('--nSnapshots', type=int, default=0)
     parser.add_argument('--snapshotPhase', type=str, default='sampling', choices=['sampling', 'equilibration', 'all'])
     
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('--sampleNames', type=str, default=None) # read in as file, list
     parser.add_argument('--fixedPatterns', type=str, default=None) # read in as file, matrix
     parser.add_argument('--whichMatrixFixed', type=str, default=None, choices=['A', 'P'])
-    parser.add_argument('--takePumpSamples', type=bool, default=False)
+    parser.add_argument('--takePumpSamples', type=str, default="False", choices=["False","True"])
     parser.add_argument('--hdfKey', type=str, default=None)
     parser.add_argument('--hdfRowKey', type=str, default=None)
     parser.add_argument('--hdfColKey', type=str, default=None)
@@ -92,6 +92,8 @@ if __name__ == '__main__':
     additional_params = ["subsetIndices", "subsetDim", "geneNames", "sampleNames",   
                 "fixedPatterns", "whichMatrixFixed", "takePumpSamples", 
                 "hdfKey", "hdfRowKey", "hdfColKey"]
+
+    bool_params = ["messages", "useSparseOptimization", "asynchronousUpdates", "takePumpSamples"]
     
     '''
     parse all args and set as parameters for CoGAPS
@@ -99,6 +101,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     data_path = args.path
+
+    def to_bool(val):
+        if val == "True":
+            return True
+        else:
+            return False
+
+    args.transposeData = to_bool(args.transposeData)
     
     params = CoParams(path=data_path, transposeData=args.transposeData, 
                       hdfKey=args.hdfKey, hdfRowKey=args.hdfRowKey,
@@ -125,6 +135,10 @@ if __name__ == '__main__':
         if ((k not in initial_params) and (k not in distributed_params) and (k not in ("fixedPatterns", "uncertainty"))):
             if k in list_params:
                 v = file_to_type(k, v)
+
+            if k in bool_params:
+                v = to_bool(v)
+                
             setParam(params, k, v)
     
      # set fixed patterns from additional params
