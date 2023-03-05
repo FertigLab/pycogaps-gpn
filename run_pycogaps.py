@@ -157,6 +157,4 @@ if __name__ == '__main__':
     result = CoGAPS(data_path, params, transposeData=args.transposeData, uncertainty=args.uncertainty)
 
     # save CoGAPS result
-    print("Pickling...", end='\r')
-    pickle.dump(result, open(args.resultFile, "wb"))
-    print("Pickling complete!")
+    result.write(args.resultFile)
